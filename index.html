@@ -188,32 +188,41 @@
 <div class="h-14 md:hidden"></div>
 
 <script>
-  // Conversion labels. Paste the label for Call / WhatsApp after creating those actions in Google Ads
-  // (format: 'AW-18161187460/xxxxxxxx'). Empty = not tracked yet.
+  // Conversion configuration
   var CONV = {
     lead: 'AW-18161187460/yHS9CNCsrJkdEIT19tND',
     call: '',
     whatsapp: ''
   };
-  function track(key) {
-    if (CONV[key] && typeof gtag === 'function') gtag('event', 'conversion', { send_to: CONV[key] });
+
+  function trackClick(key) {
+    if (CONV[key] && typeof gtag === 'function') {
+      gtag('event', 'conversion', { 'send_to': CONV[key] });
+    }
   }
 
-  // Call and WhatsApp link clicks (works for every tel: and wa.me link on the page)
+  // Tracking clicks for Call and WhatsApp links
   document.addEventListener('click', function (e) {
     var a = e.target.closest && e.target.closest('a');
     if (!a) return;
     var href = a.getAttribute('href') || '';
-    if (href.indexOf('tel:') === 0) track('call');
-    else if (href.indexOf('wa.me') > -1) track('whatsapp');
+    if (href.indexOf('tel:') === 0) {
+      trackClick('call');
+    } else if (href.indexOf('wa.me') > -1) {
+      trackClick('whatsapp');
+    }
   });
 
-  // Lead form
+  // Lead Form submission with reliable Google Ads conversion delivery
   document.getElementById('leadForm').addEventListener('submit', function (event) {
     event.preventDefault();
     var form = event.currentTarget;
     var error = document.getElementById('lead-form-error');
-    if (!form.reportValidity()) { error.classList.remove('hidden'); return; }
+
+    if (!form.reportValidity()) {
+      error.classList.remove('hidden');
+      return;
+    }
     error.classList.add('hidden');
 
     var data = new FormData(form);
@@ -228,9 +237,27 @@
       '• Problem: ' + String(data.get('issue')).trim()
     ].join('\n');
 
-    // Records a form submission; it cannot confirm the user sent the WhatsApp message.
-    track('lead');
-    window.open('https://wa.me/917208511080?text=' + encodeURIComponent(message), '_blank', 'noopener');
+    var waUrl = 'https://wa.me/917208511080?text=' + encodeURIComponent(message);
+    var redirected = false;
+
+    function proceedToWhatsApp() {
+      if (!redirected) {
+        redirected = true;
+        window.location.href = waUrl;
+      }
+    }
+
+    if (typeof gtag === 'function' && CONV.lead) {
+      gtag('event', 'conversion', {
+        'send_to': CONV.lead,
+        'event_callback': function () {
+          proceedToWhatsApp();
+        }
+      });
+      setTimeout(proceedToWhatsApp, 500);
+    } else {
+      proceedToWhatsApp();
+    }
   });
 </script>
 </body>
